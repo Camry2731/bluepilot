@@ -2,6 +2,7 @@ import json
 from typing import Any
 from openpilot.common.params import Params
 from bluepilot.logger.bp_logger import debug, error
+from opendbc.car.ford.values import FordFlags
 
 # Define the path to the params.json file
 PARAMS_JSON_PATH = "/data/openpilot/bluepilot/params/params.json"
@@ -131,7 +132,9 @@ def initialize_custom_params(params: Params) -> None:
   for param in _params_data.get("params", []):
     name = param["name"]
     param_type = param["type"]
-    default_value = param["default"]
+    default_value = param.get("default")
+    if "default_CAN" in param or "default_CANFD" in param:
+      default_value = None
     flags = 0
     flag_list = []
 
@@ -209,7 +212,14 @@ def apply_custom_params(obj: Any, prop_key: str, component_type: str) -> None:
   for attr_name, param in prop_cache.items():
     param_name = param["name"]
     param_type = param["type"]
-    default_value = param["default"]
+    default_value = param.get("default")
+
+    if "default_CAN" in param or "default_CANFD" in param:
+      cp = getattr(obj, "CP", None)
+      if cp is not None and hasattr(cp, "flags") and (cp.flags & FordFlags.CANFD):
+        default_value = param.get("default_CANFD", default_value)
+      else:
+        default_value = param.get("default_CAN", default_value)
     min_value = param.get("min")
     max_value = param.get("max")
 

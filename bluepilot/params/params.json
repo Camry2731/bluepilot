@@ -123,7 +123,9 @@
     },
     {
       "name": "FordLatTuningPCBlendRatio_high_C",
-      "default": 0.40,
+      "default": null,
+      "default_CAN": 0.20,
+      "default_CANFD": 0.40,
       "min": 0.0,
       "max": 1.0,
       "type": "float",
@@ -134,7 +136,9 @@
     },
     {
       "name": "FordLatTuningPCBlendRatio_low_C",
-      "default": 0.75,
+      "default": null,
+      "default_CAN": 0.40,
+      "default_CANFD": 0.65,
       "min": 0.0,
       "max": 1.0,
       "type": "float",
@@ -196,7 +200,9 @@
     },
     {
       "name": "FordLatTuningPathAngleHighSpeedFactorUI",
-      "default": 1.0,
+      "default": null,
+      "default_CAN": 7.5,
+      "default_CANFD": 1.8,
       "min": 0.0,
       "max": 10.0,
       "type": "float",
@@ -207,7 +213,9 @@
     },
     {
       "name": "FordLatTuningPathAngleHighCurvatureFactorUI",
-      "default": 0.2,
+      "default": null,
+      "default_CAN": 0.20,
+      "default_CANFD": 0.0,
       "min": 0.0,
       "max": 1.0,
       "type": "float",
