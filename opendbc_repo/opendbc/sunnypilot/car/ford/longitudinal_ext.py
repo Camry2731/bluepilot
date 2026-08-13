@@ -64,6 +64,8 @@ class LongitudinalExt:
     self.precharge_actuate_target = -0.12
     self.precharge_actuate_release = -0.06
     self.op_brake_actuate_last = False
+    self.bp_brake_actuate_last = False
+    self.bp_precharge_actuate_last = False
 
     # Toggles (updated from Params each frame)
     self.disable_BP_long_UI = False
@@ -156,8 +158,10 @@ class LongitudinalExt:
       min_follow_gas = op_gas
       max_follow_accel = op_accel
       min_follow_accel = op_accel
-      bp_brake_actuate = False
-      bp_precharge_actuate = False
+      # Start from the previous BP brake/precharge states so the deadband between
+      # engage and release thresholds is real hysteresis instead of resetting every frame.
+      bp_brake_actuate = self.bp_brake_actuate_last
+      bp_precharge_actuate = self.bp_precharge_actuate_last
 
       if lead:
         if v_rel < -0.1:
@@ -205,14 +209,16 @@ class LongitudinalExt:
       if ttc_sec > 8.0 and lead_time_sec > 0.5:
         bp_accel = clip(bp_accel, self.bp_accel_last - self.following_accel_ROC, 999)
 
-      # BP brake/precharge hysteresis
+      # BP brake/precharge hysteresis. Once engaged, hold the state through the
+      # deadband and only release above the dedicated release threshold.
       if bp_accel < self.brake_actuate_target:
         bp_brake_actuate = True
-      if bp_accel > self.brake_actuate_release:
+      elif bp_accel > self.brake_actuate_release:
         bp_brake_actuate = False
+
       if bp_accel < self.precharge_actuate_target:
         bp_precharge_actuate = True
-      if bp_accel > self.precharge_actuate_release:
+      elif bp_accel > self.precharge_actuate_release:
         bp_precharge_actuate = False
 
       # Decide whether to apply BP long
@@ -227,21 +233,31 @@ class LongitudinalExt:
         gas = bp_gas
         brake_actuate = bp_brake_actuate
         precharge_actuate = bp_precharge_actuate
+        self.bp_brake_actuate_last = bp_brake_actuate
+        self.bp_precharge_actuate_last = bp_precharge_actuate
       else:
         accel = op_accel
         gas = op_gas
         brake_actuate = op_brake_actuate
         precharge_actuate = op_brake_actuate
+        # Synchronize the BP latches with the controller that is actually in charge.
+        # This prevents a stale BP brake state from being resurrected when BP long
+        # re-enters after a pedal override, speed gate, slow lead, or disengagement.
+        self.bp_brake_actuate_last = op_brake_actuate
+        self.bp_precharge_actuate_last = op_brake_actuate
 
       self.bp_gas_last = bp_gas
       self.bp_accel_last = bp_accel
       bp_long_used = apply_bp_long
     else:
-      # BP long disabled — pass through stock values
+      # BP long disabled — pass through stock values and keep BP latches synchronized
+      # so re-enabling the feature cannot restore a stale brake/precharge state.
       accel = op_accel
       gas = op_gas
       brake_actuate = op_brake_actuate
       precharge_actuate = op_brake_actuate
+      self.bp_brake_actuate_last = op_brake_actuate
+      self.bp_precharge_actuate_last = op_brake_actuate
       bp_long_used = False
 
     # Mutual exclusion: no brake and gas at the same time
